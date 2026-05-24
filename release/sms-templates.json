@@ -1,0 +1,98 @@
+[
+  {
+    "name": "hdfc-debit-at",
+    "pattern": "(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?\\s*(?<type>debited|withdrawn)\\s+(?:for|of|with)?\\s*(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?:at|to)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "HDFC-style: A/c x1234 debited for Rs.500 at ZOMATO on 24-05-26"
+  },
+  {
+    "name": "hdfc-credit",
+    "pattern": "(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?\\s*(?<type>credited)\\s+(?:with|by|for)?\\s*(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?:from|by)?\\s*(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "HDFC-style credit: A/c x1234 credited with Rs.2000 from SALARY on 24-05-26"
+  },
+  {
+    "name": "icici-debit",
+    "pattern": "(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?<type>debited|withdrawn)\\s+from\\s+(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?\\s*(?:at|to)?\\s*(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "ICICI/Axis: Rs.500 debited from A/c **1234 at MERCHANT on 24-05-26"
+  },
+  {
+    "name": "icici-credit",
+    "pattern": "(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?<type>credited)\\s+to\\s+(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?\\s*(?:from|by)?\\s*(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "ICICI credit: Rs.2000 credited to A/c **1234 from MERCHANT on 24-05-26"
+  },
+  {
+    "name": "sbi-debit",
+    "pattern": "(?:your\\s+)?(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?\\s*has\\s+been\\s+(?<type>debited|withdrawn)\\s+(?:with|for|by|of)?\\s*(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)(?:\\s+(?:at|to)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$))?\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "SBI: Your A/c x1234 has been debited with Rs.500 on 24-05-26"
+  },
+  {
+    "name": "sbi-credit",
+    "pattern": "(?:your\\s+)?(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?\\s*has\\s+been\\s+(?<type>credited)\\s+(?:with|by|for)?\\s*(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)(?:\\s+(?:from|by)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$))?\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "SBI credit: Your A/c x1234 has been credited with Rs.2000 from MERCHANT"
+  },
+  {
+    "name": "upi-paid-to",
+    "pattern": "(?<type>paid|sent)\\s+(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+to\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)(?:\\s+via\\s+\\S+)?\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "UPI Debit: Paid Rs.500 to ZOMATO via UPI on 24-05-26"
+  },
+  {
+    "name": "upi-received-from",
+    "pattern": "(?<type>received)\\s+(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+from\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)(?:\\s+via\\s+\\S+)?\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "UPI Credit: Received Rs.500 from MERCHANT via UPI on 24-05-26"
+  },
+  {
+    "name": "card-spent-at",
+    "pattern": "(?:you(?:'ve)?\\s+)?(?<type>spent|used)\\s+(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?:at|on|to)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "Card spent: You've spent Rs.200 at SWIGGY on 24-05-26"
+  },
+  {
+    "name": "card-purchase",
+    "pattern": "(?<type>purchase)\\s+of\\s+(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?:at|on)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?)?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "Card purchase: Purchase of Rs.1200 at AMAZON on 24-05-26"
+  },
+  {
+    "name": "atm-withdrawal",
+    "pattern": "(?:atm\\s+)?(?<type>withdrawal|withdrawn)\\s+(?:of|for)?\\s+(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:from\\s+(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?)?\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "ATM withdrawal: ATM withdrawal of Rs.2000 from A/c x1234 on 24-05-26"
+  },
+  {
+    "name": "neft-imps-debit",
+    "pattern": "(?<type>neft|imps|rtgs)\\s+(?:transfer|txn)?\\s*(?:of\\s+)?(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?:to|from)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "NEFT/IMPS/RTGS: IMPS transfer of Rs.5000 to MERCHANT on 24-05-26"
+  },
+  {
+    "name": "refund",
+    "pattern": "(?<type>refund)\\s+(?:of\\s+)?(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?:(?:received|processed|credited)\\s+)?(?:from|by)?\\s*(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "Refund: Refund of Rs.299 received from MERCHANT"
+  },
+  {
+    "name": "deposited",
+    "pattern": "(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?<type>deposited|added)\\s+(?:to|in)?\\s*(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "Deposited: Rs.5000 deposited to A/c x1234 on 24-05-26"
+  },
+  {
+    "name": "generic-debit",
+    "pattern": "(?<type>debited|withdrawn|deducted)(?:[^₹Rs.]*)(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)(?:\\s+(?:at|to)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$))?\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "Generic debit fallback: <anything> debited <amount>"
+  },
+  {
+    "name": "generic-credit",
+    "pattern": "(?<type>credited|received|deposited)(?:[^₹Rs.]*)(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)(?:\\s+(?:from|by)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$))?\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "Generic credit fallback: <anything> credited <amount>"
+  }
+]

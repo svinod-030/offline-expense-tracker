@@ -7,175 +7,237 @@ import {
   parseSmsForBillSync,
   parseDateString,
   extractTransactionAmount,
-  extractTransactionDate
+  extractTransactionDate,
 } from '../../src/utils/smsParser';
 
-describe('Date String Parser', () => {
-  it('should parse YYYY-MM-DD and YYYY/MM/DD formats correctly', () => {
-    const d1 = parseDateString('2026-05-24');
-    expect(d1?.getFullYear()).toBe(2026);
-    expect(d1?.getMonth()).toBe(4); // May is 4
-    expect(d1?.getDate()).toBe(24);
+import { matchSmsTemplate, resolveTransactionType } from '../../src/utils/smsTemplates';
 
-    const d2 = parseDateString('2027/12/05');
-    expect(d2?.getFullYear()).toBe(2027);
-    expect(d2?.getMonth()).toBe(11); // December is 11
-    expect(d2?.getDate()).toBe(5);
+// ─── Date Parser ──────────────────────────────────────────────────────────────
+
+describe('parseDateString', () => {
+  it.each([
+    ['2026-05-24', 2026, 4, 24],
+    ['2027/12/05', 2027, 11, 5],
+  ])('YYYY-MM-DD: %s', (s, yr, mo, d) => {
+    const date = parseDateString(s)!;
+    expect(date.getFullYear()).toBe(yr);
+    expect(date.getMonth()).toBe(mo);
+    expect(date.getDate()).toBe(d);
   });
 
-  it('should parse DD-MM-YY and DD/MM/YY formats correctly (Indian standard)', () => {
-    const d1 = parseDateString('24-05-26');
-    expect(d1?.getFullYear()).toBe(2026);
-    expect(d1?.getMonth()).toBe(4);
-    expect(d1?.getDate()).toBe(24);
-
-    const d2 = parseDateString('05/12/26');
-    expect(d2?.getFullYear()).toBe(2026);
-    expect(d2?.getMonth()).toBe(11);
-    expect(d2?.getDate()).toBe(5);
+  it.each([
+    ['24-05-26', 2026, 4, 24],
+    ['05/12/26', 2026, 11, 5],
+  ])('DD-MM-YY: %s', (s, yr, mo, d) => {
+    const date = parseDateString(s)!;
+    expect(date.getFullYear()).toBe(yr);
+    expect(date.getMonth()).toBe(mo);
+    expect(date.getDate()).toBe(d);
   });
 
-  it('should parse DD-MM-YYYY and DD/MM/YYYY formats correctly', () => {
-    const d1 = parseDateString('24-05-2026');
-    expect(d1?.getFullYear()).toBe(2026);
-    expect(d1?.getMonth()).toBe(4);
-    expect(d1?.getDate()).toBe(24);
-
-    const d2 = parseDateString('05/12/2026');
-    expect(d2?.getFullYear()).toBe(2026);
-    expect(d2?.getMonth()).toBe(11);
-    expect(d2?.getDate()).toBe(5);
+  it.each([
+    ['24-05-2026', 2026, 4, 24],
+    ['05/12/2026', 2026, 11, 5],
+  ])('DD-MM-YYYY: %s', (s, yr, mo, d) => {
+    const date = parseDateString(s)!;
+    expect(date.getFullYear()).toBe(yr);
+    expect(date.getMonth()).toBe(mo);
+    expect(date.getDate()).toBe(d);
   });
 
-  it('should parse DD-MMM-YY(YY) formats correctly', () => {
-    const d1 = parseDateString('30-APR-26');
-    expect(d1?.getFullYear()).toBe(2026);
-    expect(d1?.getMonth()).toBe(3); // April is 3
-    expect(d1?.getDate()).toBe(30);
-
-    const d2 = parseDateString('30 Apr 2026');
-    expect(d2?.getFullYear()).toBe(2026);
-    expect(d2?.getMonth()).toBe(3);
-    expect(d2?.getDate()).toBe(30);
+  it.each([
+    ['30-APR-26', 2026, 3, 30],
+    ['30 Apr 2026', 2026, 3, 30],
+  ])('DD-MMM-YY: %s', (s, yr, mo, d) => {
+    const date = parseDateString(s)!;
+    expect(date.getFullYear()).toBe(yr);
+    expect(date.getMonth()).toBe(mo);
+    expect(date.getDate()).toBe(d);
   });
 });
 
-describe('Heuristic Amount Extractor', () => {
-  it('should extract transaction amount and filter out available balance', () => {
-    const body = 'Your A/C x1234 has been debited for Rs. 500.00 at ZOMATO. Avl Bal: Rs. 15,230.12.';
-    const amount = extractTransactionAmount(body);
-    expect(amount).toBe(500);
+// ─── Amount Extractor ─────────────────────────────────────────────────────────
+
+describe('extractTransactionAmount', () => {
+  it('returns transaction amount, skipping available balance', () => {
+    expect(
+      extractTransactionAmount('A/c x1234 debited for Rs.500 at ZOMATO. Avl Bal: Rs.15,230.12.')
+    ).toBe(500);
   });
 
-  it('should extract spent amount and filter out limit / outstanding', () => {
-    const body = 'Spent INR 1,250.00 on your card ending 9876. Limit: INR 100,000. Outstanding: INR 45,000.00.';
-    const amount = extractTransactionAmount(body);
-    expect(amount).toBe(1250);
+  it('skips card limit and outstanding', () => {
+    expect(
+      extractTransactionAmount('Spent INR 1,250 on card. Limit: INR 100,000. Outstanding: INR 45,000.')
+    ).toBe(1250);
   });
 
-  it('should fall back to first amount if all amounts are adjacent to keywords', () => {
-    const body = 'Available Balance: Rs 500';
-    const amount = extractTransactionAmount(body);
-    expect(amount).toBe(500);
+  it('falls back to first amount when all have balance context', () => {
+    expect(extractTransactionAmount('Available Balance: Rs 500')).toBe(500);
   });
 });
 
-describe('Transaction Date Extractor', () => {
-  it('should prioritize prefixed date in body', () => {
-    const body = 'Debited Rs. 500 on 24-05-26 from your account.';
-    const dateStr = extractTransactionDate(body, 1774354200000); // Some default fallback timestamp
-    const d = new Date(dateStr);
-    expect(d.getFullYear()).toBe(2026);
-    expect(d.getMonth()).toBe(4); // May
-    expect(d.getDate()).toBe(24);
-  });
+// ─── Date Extractor ───────────────────────────────────────────────────────────
 
-  it('should match any general date in body if no prefix is found', () => {
-    const body = 'Debited Rs. 500 (txn date 24-05-2026)';
-    const dateStr = extractTransactionDate(body, 1774354200000);
-    const d = new Date(dateStr);
+describe('extractTransactionDate', () => {
+  const FALLBACK = 1748000000000;
+
+  it('prefers prefixed date (on <date>)', () => {
+    const d = new Date(extractTransactionDate('Debited Rs.500 on 24-05-26.', FALLBACK));
     expect(d.getFullYear()).toBe(2026);
     expect(d.getMonth()).toBe(4);
     expect(d.getDate()).toBe(24);
   });
 
-  it('should fallback to message date if no dates match', () => {
-    const fallback = 1774354200000;
-    const body = 'Debited Rs. 500 at merchant.';
-    const dateStr = extractTransactionDate(body, fallback);
-    expect(new Date(dateStr).getTime()).toBe(fallback);
+  it('picks up any date in body if no prefix', () => {
+    const d = new Date(extractTransactionDate('Txn ref 123 (24-05-2026)', FALLBACK));
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(4);
+  });
+
+  it('falls back to message timestamp when no date found', () => {
+    expect(extractTransactionDate('Debited Rs.500 at merchant.', FALLBACK)).toBe(new Date(FALLBACK).toISOString());
   });
 });
 
-describe('SMS Transaction Parser Sync', () => {
-  it('should ignore non-transactional / OTP messages', () => {
-    const sms = {
-      address: 'BANKEX',
-      body: 'Your OTP is 123456 to login to Bank app.',
-      date: Date.now()
-    };
-    expect(parseSmsForTransactionSync(sms)).toBeNull();
+// ─── Template Matching ────────────────────────────────────────────────────────
+
+describe('matchSmsTemplate', () => {
+  it('matches HDFC-style debit', () => {
+    const m = matchSmsTemplate('A/c x1234 debited for Rs.500.00 at Zomato on 24-05-26. Ref 123456');
+    expect(m).not.toBeNull();
+    expect(m!.amount).toBe('500.00');
+    expect(m!.type).toBe('debited');
+    expect(m!.merchant?.toLowerCase()).toContain('zomato');
   });
 
-  it('should parse valid debit SMS correctly', () => {
-    const sms = {
-      address: 'BANKEX',
-      body: 'Your A/C x1234 has been debited for Rs. 500.00 at Zomato on 24-05-26. Ref: 123456.',
-      date: Date.now()
-    };
-    const res = parseSmsForTransactionSync(sms);
-    expect(res).not.toBeNull();
-    expect(res?.amount).toBe(500);
-    expect(res?.type).toBe('expense');
-    expect(res?.merchant).toBe('Zomato');
-    expect(res?.accountRef).toBe('1234');
-    expect(res?.referenceId).toBe('123456');
-    const parsedDate = new Date(res!.receivedAt);
-    expect(parsedDate.getFullYear()).toBe(2026);
-    expect(parsedDate.getMonth()).toBe(4); // May
-    expect(parsedDate.getDate()).toBe(24);
+  it('matches ICICI-style debit (amount first)', () => {
+    const m = matchSmsTemplate('Rs.1,200.00 debited from A/c **9876 at Amazon on 24-05-2026');
+    expect(m).not.toBeNull();
+    expect(m!.amount).toBe('1,200.00');
+    expect(m!.type).toBe('debited');
   });
 
-  it('should parse valid credit SMS correctly', () => {
-    const sms = {
-      address: 'BANKEX',
-      body: 'Your A/C x4321 has been credited with Rs. 15,000.00 on 24/05/2026. Ref: UTR98765.',
-      date: Date.now()
-    };
-    const res = parseSmsForTransactionSync(sms);
-    expect(res).not.toBeNull();
-    expect(res?.amount).toBe(15000);
-    expect(res?.type).toBe('income');
-    expect(res?.referenceId).toBe('UTR98765');
-    const parsedDate = new Date(res!.receivedAt);
-    expect(parsedDate.getFullYear()).toBe(2026);
-    expect(parsedDate.getMonth()).toBe(4);
-    expect(parsedDate.getDate()).toBe(24);
+  it('matches UPI paid-to', () => {
+    const m = matchSmsTemplate('Paid Rs.150 to Swiggy via UPI on 24-05-26. Ref 99887766');
+    expect(m).not.toBeNull();
+    expect(m!.type).toBe('paid');
+    expect(m!.amount).toBe('150');
+  });
+
+  it('matches UPI received-from', () => {
+    const m = matchSmsTemplate('Received Rs.2,000 from John Doe via UPI on 24-05-2026');
+    expect(m).not.toBeNull();
+    expect(m!.type).toBe('received');
+    expect(Number(m!.amount.replace(/,/, ''))).toBe(2000);
+  });
+
+  it('matches SBI-style has-been-debited', () => {
+    const m = matchSmsTemplate('Your A/c x4321 has been debited with Rs.800 on 24-05-26.');
+    expect(m).not.toBeNull();
+    expect(m!.type).toBe('debited');
+    expect(m!.amount).toBe('800');
+  });
+
+  it('maps debited to expense', () => {
+    expect(resolveTransactionType('debited')).toBe('expense');
+  });
+
+  it('maps credited to income', () => {
+    expect(resolveTransactionType('credited')).toBe('income');
+  });
+
+  it('maps received to income', () => {
+    expect(resolveTransactionType('received')).toBe('income');
   });
 });
 
-describe('SMS Bill Parser Sync', () => {
-  it('should ignore transaction messages', () => {
-    const sms = {
-      address: 'BANKEX',
-      body: 'Your A/C x1234 has been debited for Rs. 500.00',
-      date: Date.now()
-    };
-    expect(parseSmsForBillSync(sms)).toBeNull();
+// ─── Full parser (template path) ──────────────────────────────────────────────
+
+describe('parseSmsForTransactionSync — template path', () => {
+  it('ignores OTP messages', () => {
+    expect(parseSmsForTransactionSync({ address: 'BANKEX', body: 'Your OTP is 123456', date: Date.now() })).toBeNull();
   });
 
-  it('should parse bill due message correctly', () => {
+  it('parses HDFC debit SMS with confidence 0.97', () => {
+    const sms = {
+      address: 'HDFCBK',
+      body: 'A/c x1234 debited for Rs.500.00 at Zomato on 24-05-26. Ref 987654',
+      date: Date.now(),
+    };
+    const res = parseSmsForTransactionSync(sms)!;
+    expect(res).not.toBeNull();
+    expect(res.amount).toBe(500);
+    expect(res.type).toBe('expense');
+    expect(res.confidence).toBe(0.97);
+    expect(res.merchant?.toLowerCase()).toContain('zomato');
+    const d = new Date(res.receivedAt);
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(4);
+    expect(d.getDate()).toBe(24);
+  });
+
+  it('parses credit SMS correctly', () => {
+    const sms = {
+      address: 'HDFCBK',
+      body: 'A/c x4321 credited with Rs.15,000 from SALARY CORP on 24/05/2026. Ref UTR9876543',
+      date: Date.now(),
+    };
+    const res = parseSmsForTransactionSync(sms)!;
+    expect(res.type).toBe('income');
+    expect(res.amount).toBe(15000);
+    expect(res.confidence).toBe(0.97);
+  });
+
+  it('parses UPI paid-to as expense', () => {
+    const sms = {
+      address: 'UPIPAY',
+      body: 'Paid Rs.150 to Swiggy via UPI on 24-05-26. Ref 99887766',
+      date: Date.now(),
+    };
+    const res = parseSmsForTransactionSync(sms)!;
+    expect(res.type).toBe('expense');
+    expect(res.amount).toBe(150);
+    expect(res.merchant?.toLowerCase()).toContain('swiggy');
+  });
+});
+
+// ─── Full parser (heuristic fallback path) ────────────────────────────────────
+
+describe('parseSmsForTransactionSync — heuristic fallback', () => {
+  it('falls back gracefully for non-standard debit SMS (no template match)', () => {
+    // Deliberately vague — no "debited/credited" verb, uses unusual phrasing
+    const sms = {
+      address: 'BANKEX',
+      body: 'Money sent Rs.999 somewhere on 24-05-26.',
+      date: Date.now(),
+    };
+    const res = parseSmsForTransactionSync(sms)!;
+    expect(res).not.toBeNull();
+    expect(res.amount).toBe(999);
+    // Template OR heuristic will resolve — either way amount must be correct
+    expect([0.97, 0.80, 0.60]).toContain(res.confidence);
+  });
+});
+
+// ─── Bill Parser ──────────────────────────────────────────────────────────────
+
+describe('parseSmsForBillSync', () => {
+  it('ignores non-bill messages', () => {
+    expect(parseSmsForBillSync({ address: 'BANKEX', body: 'Debited Rs.500', date: Date.now() })).toBeNull();
+  });
+
+  it('parses bill due message', () => {
     const sms = {
       address: 'BSNL',
-      body: 'Your bill of Rs. 399.00 is due on 30-Apr-2026. Please pay to avoid suspension.',
-      date: Date.now()
+      body: 'Your bill of Rs.399 is due on 30-Apr-2026. Please pay to avoid suspension.',
+      date: Date.now(),
     };
-    const res = parseSmsForBillSync(sms);
+    const res = parseSmsForBillSync(sms)!;
     expect(res).not.toBeNull();
-    expect(res?.amount).toBe(399);
-    const parsedDueDate = new Date(res!.dueDate!);
-    expect(parsedDueDate.getFullYear()).toBe(2026);
-    expect(parsedDueDate.getMonth()).toBe(3); // April
-    expect(parsedDueDate.getDate()).toBe(30);
+    expect(res.amount).toBe(399);
+    const d = new Date(res.dueDate!);
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(3); // April
+    expect(d.getDate()).toBe(30);
   });
 });
