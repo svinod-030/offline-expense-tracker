@@ -1241,7 +1241,7 @@ async function ingestSmsMessages(
           categoryId,
           parsed.amount,
           parsed.type,
-          new Date(message.date).toISOString(),
+          parsed.receivedAt,
           parsed.merchant || (message.address ? `SMS: ${message.address}` : "Transaction"),
           kind,
           parsed.merchant || "",

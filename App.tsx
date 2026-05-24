@@ -8,7 +8,6 @@ import { useColorScheme } from "nativewind";
 import { initDatabase } from "./src/db/database";
 import { useExpenseStore } from "./src/store/useExpenseStore";
 import { checkSmsPermission, requestSmsPermissionWithStatus } from "./src/utils/smsReader";
-import { preloadMLKitModel } from "./src/utils/smsParser";
 import { loadCachedConfig, refreshRemoteConfig } from "./src/utils/remoteConfig";
 import UpdateModal from './src/components/UpdateModal';
 import { checkVersion } from './src/utils/versionCheckService';
@@ -43,7 +42,6 @@ export default function App() {
         setIsReady(true);
 
         // b. Silent pre-loads
-        preloadMLKitModel().catch(() => { /* non-fatal */ });
         refreshRemoteConfig().catch(() => { /* non-fatal background refresh */ });
 
         // c. Check for updates

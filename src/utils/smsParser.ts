@@ -11,36 +11,9 @@ import { getParserConfig } from './remoteConfig';
 
 const { SmsEventModule } = NativeModules;
 
-// ─── Native bridge ────────────────────────────────────────────────────────────
+// ─── Native bridge (Notifications only) ───────────────────────────────────────
 
-interface MLKitEntity {
-  text: string;
-  type: 'TYPE_MONEY' | 'TYPE_DATE_TIME';
-  value?: number;           // only for TYPE_MONEY
-  fractionalDigits?: number;
-}
-
-// ─── Native bridge ────────────────────────────────────────────────────────────
-
-const { SMSParserModule } = NativeModules as {
-  SMSParserModule?: {
-    preloadModel: () => Promise<boolean>;
-    extractEntities: (text: string) => Promise<MLKitEntity[]>;
-  };
-};
-
-/**
- * Call once on app start to download the ~10 MB ML Kit model in the background,
- * so the first real SMS parse is instant.
- */
-export async function preloadMLKitModel(): Promise<void> {
-  if (Platform.OS !== 'android' || !SMSParserModule) return;
-  try {
-    await SMSParserModule.preloadModel();
-  } catch {
-    // Non-fatal — model will download lazily on first annotate call
-  }
-}
+// Note: SMSParserModule is completely removed as we now use pure JS heuristics.
 
 /** Non-transactional message patterns — skip these entirely */
 const nonTransactionalPatterns = [
@@ -93,12 +66,44 @@ function normalizeAmount(raw: string): number {
   return Number(raw.replace(/,/g, ''));
 }
 
+// ─── Heuristic Helpers ────────────────────────────────────────────────────────
+
 /**
- * Robustly parses common date string formats from bank SMSes.
- * Handles: DD-MMM-YY, DD-MMM-YYYY, YYYY-MM-DD, DD/MM/YYYY, etc.
- * Native Date() cannot parse "30-APR-26" so we handle it manually.
+ * Checks the text preceding the matched amount location.
+ * Returns true if the amount is likely a limit or available balance instead of the transaction amount.
  */
-/** Month-name to 0-based index map — works for both full and 3-letter abbreviations */
+function isBalanceOrLimitAmount(body: string, start: number): boolean {
+  const prefix = body.substring(0, start).toLowerCase();
+  const balanceKeywords = /\b(?:bal(?:ance)?|avl|available|updated\s+bal|new\s+bal|limit|outstanding|due|overdue|total\s+due|statement|limit\s+of|max\s+limit)\b/i;
+  const lastPart = prefix.slice(-30);
+  return balanceKeywords.test(lastPart);
+}
+
+/**
+ * Iterates through all amount patterns in the text.
+ * Finds the first amount that does not match available balance or limit context.
+ * Falls back to the first amount found if none pass.
+ */
+export function extractTransactionAmount(body: string): number | null {
+  const globalPattern = new RegExp(amountPattern.source, 'gi');
+  let match;
+  let firstMatchVal: number | null = null;
+  
+  while ((match = globalPattern.exec(body)) !== null) {
+    const val = normalizeAmount(match[1]);
+    if (val > 0) {
+      if (firstMatchVal === null) firstMatchVal = val;
+      const matchStart = match.index;
+      if (!isBalanceOrLimitAmount(body, matchStart)) {
+        return val;
+      }
+    }
+  }
+  return firstMatchVal;
+}
+
+// ─── Date Parsers ─────────────────────────────────────────────────────────────
+
 const MONTH_INDEX: Record<string, number> = {
   jan: 0, january: 0,
   feb: 1, february: 1,
@@ -114,11 +119,55 @@ const MONTH_INDEX: Record<string, number> = {
   dec: 11, december: 11,
 };
 
-function parseDateString(dateStr: string): Date | null {
+/**
+ * Robustly parses DD/MM/YY(YY), YYYY-MM-DD, and DD-MMM-YY(YY) formats.
+ * Bypasses engine-level native Date parsing bugs on platforms like Hermes.
+ */
+export function parseDateString(dateStr: string): Date | null {
   if (!dateStr) return null;
+  const cleaned = dateStr.trim();
 
-  // Handle DD-MMM-YY(YY) format e.g. "30-APR-26", "30-Apr-2026", "30 APR 2026"
-  const ddMmmYy = dateStr.match(/^(\d{1,2})[-\/\s]+([A-Za-z]{3,9})[-\/\s]+(\d{2,4})$/);
+  // 1. Handle YYYY-MM-DD or YYYY/MM/DD
+  const yyyyMmDd = cleaned.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (yyyyMmDd) {
+    const [, yrStr, monthStr, dayStr] = yyyyMmDd;
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+    const year = parseInt(yrStr, 10);
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      const d = new Date(year, month, day);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
+  // 2. Handle DD-MM-YY or DD/MM/YY (length 2 year)
+  const ddMmYy = cleaned.match(/^(\d{1,2})[-/\s](\d{1,2})[-/\s](\d{2})$/);
+  if (ddMmYy) {
+    const [, dayStr, monthStr, yrStr] = ddMmYy;
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+    const year = 2000 + parseInt(yrStr, 10);
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      const d = new Date(year, month, day);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
+  // 3. Handle DD-MM-YYYY or DD/MM/YYYY (length 4 year)
+  const ddMmYyyy = cleaned.match(/^(\d{1,2})[-/\s](\d{1,2})[-/\s](\d{4})$/);
+  if (ddMmYyyy) {
+    const [, dayStr, monthStr, yrStr] = ddMmYyyy;
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+    const year = parseInt(yrStr, 10);
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      const d = new Date(year, month, day);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
+  // 4. Handle DD-MMM-YY(YY) e.g. "30-APR-26", "30-Apr-2026", "30 APR 2026"
+  const ddMmmYy = cleaned.match(/^(\d{1,2})[-\/\s]+([A-Za-z]{3,9})[-\/\s]+(\d{2,4})$/);
   if (ddMmmYy) {
     const [, day, mon, yr] = ddMmmYy;
     const monthIdx = MONTH_INDEX[mon.toLowerCase()];
@@ -129,8 +178,8 @@ function parseDateString(dateStr: string): Date | null {
     }
   }
 
-  // Try native parsing as a fallback
-  const d = new Date(dateStr.trim());
+  // Fallback to native parsing
+  const d = new Date(cleaned);
   if (!isNaN(d.getTime())) {
     if (d.getFullYear() < 100) d.setFullYear(2000 + d.getFullYear());
     return d;
@@ -139,6 +188,32 @@ function parseDateString(dateStr: string): Date | null {
   return null;
 }
 
+/**
+ * Searches the SMS body for date strings.
+ * Prioritizes dates preceded by contextual words like 'on', 'date', 'at'.
+ * Falls back to the message receipt date if no date is matched.
+ */
+export function extractTransactionDate(body: string, messageTimestamp: number): string {
+  const dateStrPattern = /\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\d{1,2}[-\s]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-\s]+\d{2,4}/i;
+  
+  // 1. Try prefixed date (e.g. "on 24-05-26")
+  const prefixedPattern = new RegExp(`(?:on|date|dt|at)\\s*[:\\s]*(${dateStrPattern.source})`, 'i');
+  const prefixedMatch = body.match(prefixedPattern);
+  if (prefixedMatch?.[1]) {
+    const parsed = parseDateString(prefixedMatch[1]);
+    if (parsed) return parsed.toISOString();
+  }
+  
+  // 2. Try any matching date string in the body
+  const generalMatch = body.match(dateStrPattern);
+  if (generalMatch?.[0]) {
+    const parsed = parseDateString(generalMatch[0]);
+    if (parsed) return parsed.toISOString();
+  }
+  
+  // 3. Fallback to message timestamp
+  return new Date(messageTimestamp).toISOString();
+}
 
 function detectType(body: string): ParsedTransactionType | null {
   const lower = body.toLowerCase();
@@ -201,7 +276,6 @@ function extractMerchantViaRegex(body: string): string | undefined {
   }
 
   // Pattern 1: to/at/from/towards/for/by <Merchant> (on|for|using|…)
-  // We use (?:\s+|$) before the terminators to ensure we catch merchants at the end of the message.
   const toAtMatch = body.match(
     /(?:to|at|from|towards|for|by)\s+([A-Za-z0-9 .&'-]{2,70}?)[\s\.]*(?:on|for|using|via|ref|id|balance|bal|date|is|at|towards|\.Avl|\. Avl|Avl\b|Cheque|\n|$)/i
   );
@@ -213,7 +287,6 @@ function extractMerchantViaRegex(body: string): string | undefined {
   const capsMatch = body.match(/([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*){0,2})/g);
   let bestCapsMatch: string | undefined;
   if (capsMatch) {
-    const config = getParserConfig();
     for (const match of capsMatch) {
       if (match.length >= 3 && !config.allCapsNoiseWords.some(w => match.toUpperCase().includes(w))) {
         bestCapsMatch = match;
@@ -245,73 +318,70 @@ export function buildHash(sender: string, body: string, date: number): string {
   return `msg_${Math.abs(hash)}`;
 }
 
+// ─── Main transaction parsers ───────────────────────────────────────────
+
 /**
- * Async version of bill parser — uses ML Kit (Android) with Regex fallback.
+ * Async version of transaction parser. Calls the synchronous context-aware parser.
  */
-export async function parseSmsForBill(sms: SmsMessage): Promise<ParsedSmsBill | null> {
-  const body = sms.body.toLowerCase();
-  const config = getParserConfig();
-  if (!config.billKeywords.some(kw => body.includes(kw))) return null;
+export async function parseSmsForTransaction(
+  message: SmsMessage
+): Promise<ParsedSmsTransaction | null> {
+  return parseSmsForTransactionSync(message);
+}
 
-  // ── 1. Try ML Kit (Android only) ──────────────────────────────────────────
-  let aiAmount: number | null = null;
-  let aiDueDate: string | null = null;
+/**
+ * Synchronous context-aware transaction parser.
+ * Pure TypeScript, platform-agnostic, running identically on iOS & Android.
+ */
+export function parseSmsForTransactionSync(message: SmsMessage): ParsedSmsTransaction | null {
+  const sender = message.address?.trim();
+  const body = message.body?.trim();
+  if (!sender || !body) return null;
 
-  if (Platform.OS === 'android' && SMSParserModule) {
-    try {
-      const entities = await SMSParserModule.extractEntities(sms.body);
-      const money = entities.find(e => e.type === 'TYPE_MONEY');
-      const date = entities.find(e => e.type === 'TYPE_DATE_TIME');
+  // Skip OTP / bank-alert / non-transactional messages early
+  if (nonTransactionalPatterns.some(p => p.test(body))) return null;
+  const lower = body.toLowerCase();
+  if (!getTransactionKeywordRegex().test(lower)) return null;
 
-      if (money?.value != null && money.value > 0) aiAmount = money.value;
-      if (date?.text) {
-        // Use parseDateString so formats like "30-APR-26" are handled correctly
-        const parsed = parseDateString(date.text.trim());
-        if (parsed) aiDueDate = parsed.toISOString();
-      }
-    } catch {
-      // AI failed — fall through
-      console.log('AI failed for bill parsing — fall through');
-    }
-  }
+  const type = detectType(body);
+  if (!type) return null;
 
-  // ── 2. Regex fallback for amount ──────────────────────────────────────────
-  let amount = aiAmount;
-  if (!amount) {
-    const amountMatch = sms.body.match(amountPattern);
-    if (!amountMatch) return null;
-    amount = normalizeAmount(amountMatch[1]);
-  }
+  // Parse amount using context-aware heuristics
+  const amount = extractTransactionAmount(body);
+  if (amount === null || !Number.isFinite(amount) || amount <= 0) return null;
 
-  // ── 3. Regex fallback for due date ────────────────────────────────────────
-  let dueDate = aiDueDate;
-  if (!dueDate) {
-    for (const pattern of getBillDueDatePatterns()) {
-      const match = sms.body.match(pattern);
-      if (match?.[1]) {
-        const parsed = parseDateString(match[1].trim());
-        if (parsed) {
-          dueDate = parsed.toISOString();
-          break;
-        }
-      }
-    }
-    // Final fallback to message date if no date found at all
-    if (!dueDate) dueDate = new Date(sms.date).toISOString();
-  }
+  // Parse transaction date from text, falling back to message timestamp
+  const transactionDate = extractTransactionDate(body, message.date);
+
+  // Extract merchant & metadata
+  const merchant = extractMerchantViaRegex(body);
+  const accountMatch = body.match(accountPattern);
+  const refMatch = body.match(refPattern);
 
   return {
-    sender: sms.address,
-    body: sms.body,
-    receivedAt: new Date(sms.date).toISOString(),
+    sender,
+    body,
+    receivedAt: transactionDate,
+    hash: buildHash(sender, body, message.date),
     amount,
-    dueDate,
-    merchant: cleanMerchant(sms.address),
+    type,
+    kind: detectKind(body),
+    merchant: (merchant && merchant.length > 2) ? merchant : undefined,
+    referenceId: refMatch?.[1]?.trim(),
+    accountRef: accountMatch?.[1]?.trim(),
+    confidence: merchant ? 0.95 : 0.75,
   };
 }
 
 /**
- * Synchronous version of bill parser — pure Regex.
+ * Async version of bill parser. Calls the synchronous version.
+ */
+export async function parseSmsForBill(sms: SmsMessage): Promise<ParsedSmsBill | null> {
+  return parseSmsForBillSync(sms);
+}
+
+/**
+ * Synchronous version of bill parser.
  */
 export function parseSmsForBillSync(sms: SmsMessage): ParsedSmsBill | null {
   const body = sms.body.toLowerCase();
@@ -321,6 +391,7 @@ export function parseSmsForBillSync(sms: SmsMessage): ParsedSmsBill | null {
   const amountMatch = sms.body.match(amountPattern);
   if (!amountMatch) return null;
   const amount = normalizeAmount(amountMatch[1]);
+  if (amount <= 0) return null;
 
   let dueDate = new Date(sms.date).toISOString();
   for (const pattern of getBillDueDatePatterns()) {
@@ -341,125 +412,6 @@ export function parseSmsForBillSync(sms: SmsMessage): ParsedSmsBill | null {
     amount,
     dueDate,
     merchant: cleanMerchant(sms.address),
-  };
-}
-
-// ─── Main hybrid transaction parser ──────────────────────────────────────────
-
-/**
- * Async version — uses ML Kit (Android) with Regex fallback for amount/date.
- * This is the preferred entry point for processing incoming SMS messages.
- */
-export async function parseSmsForTransaction(
-  message: SmsMessage
-): Promise<ParsedSmsTransaction | null> {
-  const sender = message.address?.trim();
-  const body = message.body?.trim();
-  if (!sender || !body) return null;
-
-  // Skip OTP / bank-alert / non-transactional messages early
-  if (nonTransactionalPatterns.some(p => p.test(body))) return null;
-  const lower = body.toLowerCase();
-  if (!getTransactionKeywordRegex().test(lower)) return null;
-
-  const type = detectType(body);
-  if (!type) return null;
-
-  // ── 1. Try ML Kit (Android only) ──────────────────────────────────────────
-  let aiAmount: number | null = null;
-  let aiDate: string | null = null;
-
-  if (Platform.OS === 'android' && SMSParserModule) {
-    try {
-      const entities = await SMSParserModule.extractEntities(body);
-
-      const money = entities.find(e => e.type === 'TYPE_MONEY');
-      const date = entities.find(e => e.type === 'TYPE_DATE_TIME');
-
-      if (money?.value != null && money.value > 0) aiAmount = money.value;
-      if (date) aiDate = date.text;
-    } catch {
-      // AI failed — fall through to Regex
-      console.log('AI failed — fall through to Regex');
-    }
-  }
-
-  // ── 2. Regex fallback for amount ──────────────────────────────────────────
-  let amount = aiAmount;
-  if (!amount) {
-    const amountMatch = body.match(amountPattern);
-    if (!amountMatch) return null;
-    amount = normalizeAmount(amountMatch[1]);
-  }
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-
-  // ── 3. Accuracy audit (dev mode) ─────────────────────────────────────────
-  if (__DEV__ && aiAmount != null) {
-    const regexMatch = body.match(amountPattern);
-    const regexAmount = regexMatch ? normalizeAmount(regexMatch[1]) : null;
-    if (regexAmount != null && Math.abs(aiAmount - regexAmount) > 0.01) {
-      console.warn('[SMSParser] Amount mismatch — AI:', aiAmount, ' Regex:', regexAmount, '\nBody:', body);
-    }
-  }
-
-  // ── 4. Regex for merchant & metadata ─────────────────────────────────────
-  const merchant = extractMerchantViaRegex(body);
-  const accountMatch = body.match(accountPattern);
-  const refMatch = body.match(refPattern);
-
-  return {
-    sender,
-    body,
-    receivedAt: new Date(message.date).toISOString(),
-    hash: buildHash(sender, body, message.date),
-    amount,
-    type,
-    kind: detectKind(body),
-    merchant: (merchant && merchant.length > 2) ? merchant : undefined,
-    referenceId: refMatch?.[1]?.trim(),
-    accountRef: accountMatch?.[1]?.trim(),
-    confidence: aiAmount != null ? 0.97 : (merchant ? 0.9 : 0.6),
-  };
-}
-
-/**
- * Synchronous version — pure Regex, no async, used for batch pre-processing
- * where awaiting every message is too expensive.
- * Falls back gracefully when ML Kit is unavailable.
- */
-export function parseSmsForTransactionSync(message: SmsMessage): ParsedSmsTransaction | null {
-  const sender = message.address?.trim();
-  const body = message.body?.trim();
-  if (!sender || !body) return null;
-
-  if (nonTransactionalPatterns.some(p => p.test(body))) return null;
-
-  const lower = body.toLowerCase();
-  if (!getTransactionKeywordRegex().test(lower)) return null;
-
-  const amountMatch = body.match(amountPattern);
-  const type = detectType(body);
-  if (!amountMatch || !type) return null;
-
-  const amount = normalizeAmount(amountMatch[1]);
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-
-  const merchant = extractMerchantViaRegex(body);
-  const accountMatch = body.match(accountPattern);
-  const refMatch = body.match(refPattern);
-
-  return {
-    sender,
-    body,
-    receivedAt: new Date(message.date).toISOString(),
-    hash: buildHash(sender, body, message.date),
-    amount,
-    type,
-    kind: detectKind(body),
-    merchant: (merchant && merchant.length > 2) ? merchant : undefined,
-    referenceId: refMatch?.[1]?.trim(),
-    accountRef: accountMatch?.[1]?.trim(),
-    confidence: merchant ? 0.9 : 0.6,
   };
 }
 
