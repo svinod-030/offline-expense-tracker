@@ -64,6 +64,18 @@ const MERCH_STOP = `(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|
 
 export const SMS_TEMPLATES: SmsTemplate[] = [
 
+  // ── Credit (Date before Merchant): "Your A/c x1234 has been credited with Rs. 50000 on 2026-05-04 from HDFC"
+  {
+    name: 'credited-on-from',
+    pattern: new RegExp(
+      `(?:dear\\s+customer,\\s+)?(?:your\\s+)?${OPT_ACCT}\\s*has\\s+been\\s+(?<type>credited)\\s+(?:with|by|for)?\\s*${AMT}` +
+      `\\s+on\\s+${DATE}` +
+      `\\s+(?:from|by)\\s+${MERCH}${MERCH_STOP}` +
+      `\\s*${OPT_REF}`,
+      'i'
+    ),
+  },
+
   // ── HDFC-style: "A/c x1234 debited for Rs.500 at ZOMATO on 24-05-26"
   {
     name: 'hdfc-debit-at',

@@ -138,6 +138,16 @@ describe('matchSmsTemplate', () => {
     expect(m!.amount).toBe('800');
   });
 
+  it('matches credited-on-from style (date before merchant)', () => {
+    const m = matchSmsTemplate('Dear Customer, your A/C x1234 has been credited with Rs. 50000 on 2026-05-04 from HDFC. Ref: ');
+    expect(m).not.toBeNull();
+    expect(m!.amount).toBe('50000');
+    expect(m!.type).toBe('credited');
+    expect(m!.merchant).toBe('HDFC');
+    expect(m!.date).toBe('2026-05-04');
+    expect(m!.account).toBe('1234');
+  });
+
   it('maps debited to expense', () => {
     expect(resolveTransactionType('debited')).toBe('expense');
   });
@@ -174,6 +184,25 @@ describe('parseSmsForTransactionSync — template path', () => {
     expect(d.getFullYear()).toBe(2026);
     expect(d.getMonth()).toBe(4);
     expect(d.getDate()).toBe(24);
+  });
+
+  it('parses credited-on-from SMS with date before merchant', () => {
+    const sms = {
+      address: 'SBI',
+      body: 'Dear Customer, your A/C x1234 has been credited with Rs. 50000 on 2026-05-04 from HDFC. Ref: ',
+      date: Date.now(),
+    };
+    const res = parseSmsForTransactionSync(sms)!;
+    expect(res).not.toBeNull();
+    expect(res.type).toBe('income');
+    expect(res.amount).toBe(50000);
+    expect(res.merchant).toBe('HDFC');
+    expect(res.accountRef).toBe('1234');
+    const d = new Date(res.receivedAt);
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(4);
+    expect(d.getDate()).toBe(4);
+    expect(res.confidence).toBe(0.97);
   });
 
   it('parses credit SMS correctly', () => {

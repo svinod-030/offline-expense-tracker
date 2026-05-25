@@ -1,5 +1,11 @@
 [
   {
+    "name": "credited-on-from",
+    "pattern": "(?:dear\\s+customer,\\s+)?(?:your\\s+)?(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?\\s*has\\s+been\\s+(?<type>credited)\\s+(?:with|by|for)?\\s*(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+on\\s+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4})\\s+(?:from|by)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
+    "flags": "i",
+    "description": "Credit (Date before Merchant): Your A/c x1234 has been credited with Rs. 50000 on 2026-05-04 from HDFC"
+  },
+  {
     "name": "hdfc-debit-at",
     "pattern": "(?:(?:(?:a\\/c|acct|account|card(?:\\s+ending)?|a\\/c\\s+no\\.?)\\s*[x*]*(?<account>\\d{2,6}))\\s*)?\\s*(?<type>debited|withdrawn)\\s+(?:for|of|with)?\\s*(?:(?:rs\\.?|inr|₹)\\s*)(?<amount>[0-9,]+(?:\\.[0-9]{1,2})?)\\s+(?:at|to)\\s+(?<merchant>[^.\\n]{2,60}?)(?=\\.|on\\s|for\\s|\\bbal\\b|\\bavl\\b|\\bref\\b|\\butr\\b|\\btxn\\b|\\busing\\b|\\bvia\\b|\\brs\\.?\\s*\\d|\\binr\\b|₹|$)\\s*(?:(?:on|date|dt)[:\\s]+(?<date>\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}|\\d{1,2}[\\s\\-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\\s\\-]+\\d{2,4}))?(?:[,\\s]*(?:(?:ref(?:erence)?(?:\\s*(?:no\\.?|id))?|utr(?:\\s*no\\.?)?|txn(?:\\s*id)?|tran(?:\\s*id)?)\\s*[:\\-]?\\s*(?<ref>[A-Za-z0-9]{6,30})))?",
     "flags": "i",
