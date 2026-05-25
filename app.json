@@ -2,7 +2,7 @@
   "expo": {
     "name": "SpendWise",
     "slug": "spendwise",
-    "version": "1.21.0",
+    "version": "1.22.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -29,7 +29,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.vinodsigadana030.spendwise",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 22
+      "versionCode": 23
     },
     "web": {
       "favicon": "./assets/favicon.png"
